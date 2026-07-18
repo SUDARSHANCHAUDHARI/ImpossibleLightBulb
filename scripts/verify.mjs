@@ -46,8 +46,16 @@ const responsiveViewBoxes = [...javascript.matchAll(/nextViewBox = '(-?\d+) (-?\
 assert(responsiveViewBoxes.length === 3, 'Expected landscape, portrait, and balanced view boxes');
 for (const [x, y, width, height] of responsiveViewBoxes) {
   assert(x <= 333 && x + width >= 890, `Responsive viewBox clips scene horizontally: ${x} ${y} ${width} ${height}`);
-  assert(y <= -40 && y + height >= 680, `Responsive viewBox clips scene vertically: ${x} ${y} ${width} ${height}`);
+  assert(y <= 45 && y + height >= 680, `Responsive viewBox clips the bulb or door vertically: ${x} ${y} ${width} ${height}`);
 }
+
+const [landscapeViewBox, , balancedViewBox] = responsiveViewBoxes;
+assert(landscapeViewBox[2] <= 720 && landscapeViewBox[3] <= 680, 'Landscape framing leaves too much empty room');
+assert(balancedViewBox[2] <= 780 && balancedViewBox[3] <= 720, 'Balanced framing leaves too much empty room');
+
+const promptRule = styles[0][1].match(/\.prompt\s*\{([\s\S]*?)\}/)?.[1] || '';
+assert(/top:\s*max\(/.test(promptRule), 'Pull prompt must be positioned at the top');
+assert(/bottom:\s*auto/.test(promptRule), 'Pull prompt must not return to the bottom edge');
 
 assert(!/https?:\/\//i.test(html), 'External URL found');
 assert(!/<(?:script|img|link|audio|video|source)\b[^>]+(?:src|href)=/i.test(html), 'External asset element found');
