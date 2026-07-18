@@ -27,6 +27,19 @@ assert(Number.isFinite(svgDoorOffset), 'SVG door offset is missing');
 assert(svgDoorOffset === javascriptDoorOffset, 'SVG and JavaScript door offsets do not match');
 assert(!html.includes('min-height: 480px'), 'Fixed app minimum height can crop short landscape viewports');
 assert(!html.includes('132vw'), 'Oversized mobile SVG can crop the scene horizontally');
+assert(
+  /id="cordShadow" filterUnits="userSpaceOnUse"/.test(html),
+  'Cord shadow must use a stable user-space filter region when the resting cord has zero width'
+);
+
+const frameIndex = html.indexOf('id="doorFrame"');
+const characterIndex = html.indexOf('id="character"');
+const panelIndex = html.indexOf('id="doorPanel"');
+const foregroundIndex = html.indexOf('id="doorForeground"');
+assert(
+  frameIndex < characterIndex && characterIndex < panelIndex && panelIndex < foregroundIndex,
+  'Door layers must keep the jamb behind the bear, the panel over it, and the threshold in front'
+);
 
 const responsiveViewBoxes = [...javascript.matchAll(/nextViewBox = '(-?\d+) (-?\d+) (\d+) (\d+)'/g)]
   .map(match => match.slice(1).map(Number));

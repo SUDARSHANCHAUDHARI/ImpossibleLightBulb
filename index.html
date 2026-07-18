@@ -461,7 +461,8 @@
       filter: url(#softShadow);
     }
 
-    #doorFrame {
+    #doorFrame,
+    #doorForeground {
       pointer-events: none;
     }
 
@@ -604,7 +605,7 @@
           <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#050910" flood-opacity=".28"/>
           </filter>
-          <filter id="cordShadow" x="-80%" y="-10%" width="260%" height="140%">
+          <filter id="cordShadow" filterUnits="userSpaceOnUse" x="325" y="240" width="270" height="335">
             <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#050910" flood-opacity=".45"/>
           </filter>
           <filter id="smallGlow" x="-100%" y="-100%" width="300%" height="300%">
@@ -655,6 +656,10 @@
           <rect id="doorInterior" x="740" y="158" width="278" height="494" rx="3"/>
           <path id="doorGlow" d="M740 158h90l-22 494h-68Z"/>
 
+          <g id="doorFrame" fill="none" stroke-linejoin="round">
+            <path id="doorFrameLine" d="M725 654V143h309v511" stroke="#282321" stroke-width="16"/>
+          </g>
+
           <g id="character" aria-hidden="true">
             <circle cx="754" cy="410" r="25" fill="#6f3727" stroke="#4b251d" stroke-width="4"/>
             <circle cx="754" cy="410" r="13" fill="#dc9870"/>
@@ -692,8 +697,7 @@
             <rect x="961" y="420" width="5" height="4" rx="1" fill="#fff0a3" opacity=".7"/>
           </g>
 
-          <g id="doorFrame" fill="none" stroke-linejoin="round">
-            <path id="doorFrameLine" d="M725 654V143h309v511" stroke="#282321" stroke-width="16"/>
+          <g id="doorForeground" fill="none" stroke-linejoin="round">
             <path id="doorThreshold" d="M726 651h309" stroke="#3f3531" stroke-width="10"/>
           </g>
         </g>
