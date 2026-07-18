@@ -467,24 +467,16 @@
     }
 
     .prompt {
-      position: absolute;
-      z-index: 20;
-      top: max(24px, env(safe-area-inset-top));
-      left: 50%;
-      bottom: auto;
-      width: min(80vw, 420px);
-      margin: 0;
-      color: currentColor;
+      fill: currentColor;
       font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
-      font-size: clamp(.75rem, 1.4vw, .88rem);
-      font-style: normal;
+      font-size: 24px;
       font-weight: 700;
-      letter-spacing: .045em;
-      line-height: 1.4;
-      text-align: center;
-      opacity: .46;
-      transform: translateX(-50%);
-      transition: color 350ms ease, opacity 250ms ease;
+      letter-spacing: .1em;
+      text-anchor: middle;
+      text-transform: uppercase;
+      dominant-baseline: middle;
+      opacity: .72;
+      transition: fill 350ms ease, opacity 250ms ease;
       pointer-events: none;
     }
 
@@ -517,22 +509,6 @@
         height: 40px;
       }
 
-      .prompt {
-        top: max(70px, calc(env(safe-area-inset-top) + 62px));
-        bottom: auto;
-      }
-    }
-
-    @media (max-height: 520px) and (orientation: landscape) {
-      .prompt {
-        top: max(18px, env(safe-area-inset-top));
-        right: auto;
-        bottom: auto;
-        left: 50%;
-        width: min(45vw, 220px);
-        text-align: center;
-        transform: translateX(-50%);
-      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -704,10 +680,11 @@
             <path id="doorThreshold" d="M726 651h309" stroke="#3f3531" stroke-width="10"/>
           </g>
         </g>
+
+        <text class="prompt" id="prompt" x="720" y="112" aria-hidden="true">Pull the cord</text>
       </svg>
     </section>
 
-    <p class="prompt" id="prompt">Pull the cord</p>
     <div class="sr-only" id="liveStatus" aria-live="assertive"></div>
   </main>
 
@@ -733,6 +710,8 @@
       const liveStatus = document.getElementById('liveStatus');
       const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       const DOOR_OFFSET_X = -160;
+      // Leaves the knob and its outline visibly clear of the translated jamb.
+      const CORD_MAX_RIGHT_X = 537;
 
       const State = Object.freeze({
         IDLE: 'idle',
@@ -771,7 +750,7 @@
       let previousFrameTime = performance.now();
       let viewportCordBounds = {
         minX: cord.anchorX - 118,
-        maxX: cord.anchorX + 118,
+        maxX: CORD_MAX_RIGHT_X,
         minY: cord.restY - 36,
         maxY: cord.restY + 112
       };
@@ -950,7 +929,7 @@
 
         viewportCordBounds = {
           minX: Math.min(cord.restX, Math.max(cord.anchorX - 118, visibleLeft)),
-          maxX: Math.max(cord.restX, Math.min(cord.anchorX + 118, visibleRight)),
+          maxX: Math.max(cord.restX, Math.min(CORD_MAX_RIGHT_X, visibleRight)),
           minY: Math.min(cord.restY, Math.max(cord.restY - 36, visibleTop)),
           maxY: Math.max(cord.restY, Math.min(cord.restY + 112, visibleBottom))
         };
@@ -1194,7 +1173,7 @@
         }
 
         await tween(motionDuration(reaction === 'immediate' ? 210 : 390), value => {
-          cord.x = startX + 12 * Math.sin(value * Math.PI);
+          cord.x = Math.min(CORD_MAX_RIGHT_X, startX + 12 * Math.sin(value * Math.PI));
           cord.y = startY + pullDistance * value;
           drawArm(1, { x: cord.x, y: cord.y });
           updateCordVisual();

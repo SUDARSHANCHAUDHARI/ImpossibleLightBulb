@@ -23,6 +23,7 @@ assert(missingIds.length === 0, `Missing referenced IDs: ${missingIds.join(', ')
 
 const svgDoorOffset = Number(html.match(/id="doorScene" transform="translate\((-?\d+) 0\)"/)?.[1]);
 const javascriptDoorOffset = Number(javascript.match(/const DOOR_OFFSET_X = (-?\d+)/)?.[1]);
+const cordMaxRightX = Number(javascript.match(/const CORD_MAX_RIGHT_X = (\d+)/)?.[1]);
 assert(Number.isFinite(svgDoorOffset), 'SVG door offset is missing');
 assert(svgDoorOffset === javascriptDoorOffset, 'SVG and JavaScript door offsets do not match');
 assert(!html.includes('min-height: 480px'), 'Fixed app minimum height can crop short landscape viewports');
@@ -41,6 +42,17 @@ assert(
   'Door layers must keep the jamb behind the bear, the panel over it, and the threshold in front'
 );
 
+const doorFrameX = Number(html.match(/id="doorFrameLine" d="M(\d+)/)?.[1]) + svgDoorOffset;
+const doorFrameWidth = Number(html.match(/id="doorFrameLine"[^>]+stroke-width="(\d+)"/)?.[1]);
+const knobRadius = Number(html.match(/id="knobOuter"[^>]+r="(\d+)"/)?.[1]);
+const cordDoorGap = doorFrameX - doorFrameWidth / 2 - (cordMaxRightX + knobRadius);
+assert(Number.isFinite(cordMaxRightX), 'Cord right boundary is missing');
+assert(cordDoorGap >= 10, `Cord can collide with the door frame; visual gap is ${cordDoorGap}`);
+assert(
+  javascript.includes('Math.min(CORD_MAX_RIGHT_X, startX + 12 * Math.sin'),
+  'Character cord motion can cross the door-safe boundary'
+);
+
 const responsiveViewBoxes = [...javascript.matchAll(/nextViewBox = '(-?\d+) (-?\d+) (\d+) (\d+)'/g)]
   .map(match => match.slice(1).map(Number));
 assert(responsiveViewBoxes.length === 3, 'Expected landscape, portrait, and balanced view boxes');
@@ -54,8 +66,13 @@ assert(landscapeViewBox[2] <= 720 && landscapeViewBox[3] <= 680, 'Landscape fram
 assert(balancedViewBox[2] <= 780 && balancedViewBox[3] <= 720, 'Balanced framing leaves too much empty room');
 
 const promptRule = styles[0][1].match(/\.prompt\s*\{([\s\S]*?)\}/)?.[1] || '';
-assert(/top:\s*max\(/.test(promptRule), 'Pull prompt must be positioned at the top');
-assert(/bottom:\s*auto/.test(promptRule), 'Pull prompt must not return to the bottom edge');
+assert(/font-size:\s*24px/.test(promptRule), 'Pull prompt must remain visually prominent');
+assert(/text-anchor:\s*middle/.test(promptRule), 'Pull prompt must remain centered over the door');
+assert(
+  /<text class="prompt" id="prompt" x="720" y="112" aria-hidden="true">Pull the cord<\/text>/.test(html),
+  'Pull prompt must be anchored above the SVG door'
+);
+assert(!/<p class="prompt"/.test(html), 'Screen-fixed pull prompt can drift away from the door');
 
 assert(!/https?:\/\//i.test(html), 'External URL found');
 assert(!/<(?:script|img|link|audio|video|source)\b[^>]+(?:src|href)=/i.test(html), 'External asset element found');
