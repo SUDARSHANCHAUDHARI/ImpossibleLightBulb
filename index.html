@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#26373e">
+  <meta name="description" content="A playful light bulb that never wants to stay on.">
+  <title>Impossible Light Bulb</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --midnight: #26373e;
+      --midnight-deep: #1f2e34;
+      --lamplight: #f3dca5;
+      --lamplight-deep: #dfc482;
+      --ink: #36312c;
+      --chalk: #eef3f3;
+      --character: #8f4d2f;
+      --door-dark: #332c29;
+      --door-light: #b7a69d;
+      --ease-out: cubic-bezier(.2, .75, .25, 1);
+      --door-time: 560ms;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    body {
+      min-height: 100svh;
+      background: var(--midnight);
+      color: var(--chalk);
+      font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color 450ms ease, color 350ms ease;
+    }
+
+    body.is-lit {
+      background: var(--lamplight);
+      color: var(--ink);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100svh;
+      min-height: 480px;
+      isolation: isolate;
+      overflow: hidden;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 20;
+      top: max(20px, env(safe-area-inset-top));
+      left: max(22px, env(safe-area-inset-left));
+      right: max(22px, env(safe-area-inset-right));
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .attempts {
+      margin: 0;
+      color: currentColor;
+      font-size: clamp(.76rem, 1.25vw, .9rem);
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      opacity: .84;
+      transition: color 350ms ease;
+    }
+
+    .sound-toggle {
+      display: inline-flex;
+      width: 42px;
+      height: 42px;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+      border-radius: 50%;
+      background: rgb(10 18 21 / 18%);
+      color: currentColor;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: transform 180ms ease, background-color 350ms ease, color 350ms ease;
+    }
+
+    .is-lit .sound-toggle {
+      background: rgb(255 248 218 / 42%);
+    }
+
+    .sound-toggle:hover {
+      transform: rotate(-5deg) scale(1.05);
+    }
+
+    .sound-toggle:focus-visible,
+    #cordControl:focus-visible {
+      outline: 3px solid #f4bd5f;
+      outline-offset: 4px;
+    }
+
+    .sound-toggle svg {
+      width: 20px;
+      height: 20px;
+      overflow: visible;
+    }
+
+    .sound-toggle .sound-wave,
+    .sound-toggle .sound-slash {
+      transition: opacity 150ms ease;
+    }
+
+    .sound-toggle[aria-pressed="true"] .sound-slash,
+    .sound-toggle[aria-pressed="false"] .sound-wave {
+      opacity: 0;
+    }
+
+    .milestone {
+      position: absolute;
+      z-index: 20;
+      top: max(65px, calc(env(safe-area-inset-top) + 54px));
+      right: max(22px, env(safe-area-inset-right));
+      left: auto;
+      max-width: min(70vw, 320px);
+      margin: 0;
+      color: currentColor;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(.86rem, 1.6vw, 1rem);
+      font-style: italic;
+      text-align: right;
+      opacity: 0;
+      transform: translateY(-5px);
+      transition: opacity 400ms ease, transform 400ms ease, color 350ms ease;
+      pointer-events: none;
+    }
+
+    .milestone.is-visible {
+      opacity: .78;
+      transform: translateY(0);
+    }
+
+    .scene-shell {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .room-svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      touch-action: none;
+    }
+
+    #roomFill,
+    #floorFill,
+    #baseboard,
+    #roomTexture {
+      transition: fill 450ms ease, opacity 450ms ease, stroke 450ms ease;
+    }
+
+    #roomFill {
+      fill: var(--midnight);
+    }
+
+    #floorFill {
+      fill: var(--midnight-deep);
+    }
+
+    #baseboard {
+      stroke: #29415f;
+    }
+
+    #roomTexture {
+      opacity: .035;
+    }
+
+    .is-lit #roomFill {
+      fill: var(--lamplight);
+    }
+
+    .is-lit #floorFill {
+      fill: var(--lamplight-deep);
+    }
+
+    .is-lit #baseboard {
+      stroke: #c7aa6e;
+    }
+
+    .is-lit #roomTexture {
+      opacity: .06;
+    }
+
+    #lightPool,
+    #bulbGlow {
+      opacity: 0;
+      transition: opacity 500ms ease;
+      pointer-events: none;
+    }
+
+    .is-lit #lightPool {
+      opacity: .12;
+    }
+
+    .is-lit #bulbGlow {
+      opacity: .68;
+    }
+
+    #bulbGlass {
+      fill: #31434a;
+      stroke: #d8e0e1;
+      transition: fill 220ms ease, stroke 220ms ease, filter 220ms ease;
+    }
+
+    #filament {
+      stroke: #aeb9ba;
+      transition: stroke 220ms ease, filter 220ms ease;
+    }
+
+    .is-lit #bulbGlass {
+      fill: #dfe69a;
+      stroke: #3c3832;
+      filter: url(#smallGlow);
+    }
+
+    .is-lit #filament {
+      stroke: #6d5a31;
+      filter: url(#filamentGlow);
+    }
+
+    .is-flickering #bulbGlow,
+    .is-flickering #bulbGlass,
+    .is-resisting #bulbGlow,
+    .is-resisting #bulbGlass {
+      animation: bulb-flicker 480ms steps(1, end) both;
+    }
+
+    .is-resisting #bulbGlow,
+    .is-resisting #bulbGlass {
+      animation-duration: 760ms;
+      animation-iteration-count: 2;
+    }
+
+    @keyframes bulb-flicker {
+      0%, 10%, 28%, 45%, 72%, 100% { opacity: 1; }
+      16%, 39% { opacity: .3; }
+      55% { opacity: .66; }
+      84% { opacity: .82; }
+    }
+
+    #cordLine {
+      fill: none;
+      stroke: #dbe2e3;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      filter: url(#cordShadow);
+    }
+
+    .is-lit #cordLine {
+      stroke: #34302c;
+    }
+
+    #cordKnob {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    #cordControl {
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #cordControl.is-grabbing {
+      cursor: grabbing;
+    }
+
+    #cordControl.is-ready #cordKnob {
+      transform: scale(1.12);
+      filter: url(#knobReady);
+    }
+
+    #cordControl[aria-disabled="true"] {
+      cursor: default;
+    }
+
+    #doorInterior {
+      fill: #15191a;
+    }
+
+    #doorGlow {
+      fill: #f1c66c;
+      opacity: .08;
+    }
+
+    #doorLeaf {
+      fill: var(--door-dark);
+      stroke: #4c403b;
+      transition: fill 450ms ease, stroke 450ms ease;
+    }
+
+    #doorPanels {
+      stroke: #201c1a;
+      transition: stroke 450ms ease;
+    }
+
+    #doorFrameLine,
+    #doorThreshold {
+      transition: stroke 450ms ease;
+    }
+
+    .is-lit #doorLeaf {
+      fill: var(--door-light);
+      stroke: #8e7f77;
+    }
+
+    .is-lit #doorPanels {
+      stroke: #8f8078;
+    }
+
+    .is-lit #doorFrameLine {
+      stroke: #8b7b74;
+    }
+
+    .is-lit #doorThreshold {
+      stroke: #9b8980;
+    }
+
+    #doorPanel {
+      transform-box: fill-box;
+      transform-origin: right center;
+      transition: transform var(--door-time) var(--ease-out), filter var(--door-time) ease;
+      will-change: transform;
+    }
+
+    .app[data-door="slight"] #doorPanel {
+      transform: scaleX(.96);
+      filter: drop-shadow(-5px 5px 6px rgb(0 0 0 / 18%));
+    }
+
+    .app[data-door="open"] #doorPanel {
+      transform: scaleX(.89);
+      filter: drop-shadow(-9px 7px 8px rgb(0 0 0 / 22%));
+    }
+
+    .app[data-door="wide"] #doorPanel {
+      transform: scaleX(.82);
+      filter: drop-shadow(-12px 9px 10px rgb(0 0 0 / 24%));
+    }
+
+    #character {
+      transform: translateX(132px);
+      transition: transform 480ms var(--ease-out);
+      will-change: transform;
+    }
+
+    #character.is-peeking {
+      transform: translateX(-24px);
+    }
+
+    #character.is-startled {
+      animation: startled-hop 320ms var(--ease-out);
+    }
+
+    @keyframes startled-hop {
+      0%, 100% { transform: translateX(-24px) translateY(0); }
+      40% { transform: translateX(-30px) translateY(-8px) rotate(-2deg); }
+    }
+
+    #leftPupil,
+    #rightPupil {
+      transition: transform 210ms ease;
+    }
+
+    #character.is-looking-bulb #leftPupil,
+    #character.is-looking-bulb #rightPupil {
+      transform: translate(-4px, -1px);
+    }
+
+    #character.is-looking-user #leftPupil,
+    #character.is-looking-user #rightPupil {
+      transform: translate(-1px, 4px);
+    }
+
+    #annoyedBrows,
+    #annoyedMouth,
+    #surpriseMouth {
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+
+    #smileMouth {
+      opacity: 1;
+      transition: opacity 160ms ease;
+    }
+
+    #character.is-annoyed #annoyedBrows,
+    #character.is-annoyed #annoyedMouth,
+    #character.is-startled #surpriseMouth {
+      opacity: 1;
+    }
+
+    #character.is-annoyed #smileMouth,
+    #character.is-startled #smileMouth {
+      opacity: 0;
+    }
+
+    #characterArm {
+      opacity: 0;
+      transition: opacity 100ms ease;
+      pointer-events: none;
+    }
+
+    #characterArm.is-visible {
+      opacity: 1;
+    }
+
+    #armOutline,
+    #armPath {
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    #armOutline {
+      stroke: #4b251d;
+      stroke-width: 42;
+    }
+
+    #armPath {
+      stroke: var(--character);
+      stroke-width: 34;
+      filter: url(#softShadow);
+    }
+
+    #doorFrame {
+      pointer-events: none;
+    }
+
+    .prompt {
+      position: absolute;
+      z-index: 20;
+      left: 50%;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      width: min(80vw, 420px);
+      margin: 0;
+      color: currentColor;
+      font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
+      font-size: clamp(.75rem, 1.4vw, .88rem);
+      font-style: normal;
+      font-weight: 700;
+      letter-spacing: .045em;
+      line-height: 1.4;
+      text-align: center;
+      opacity: .46;
+      transform: translateX(-50%);
+      transition: color 350ms ease, opacity 250ms ease;
+      pointer-events: none;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 680px) {
+      .room-svg {
+        position: relative;
+        left: 50%;
+        width: 132vw;
+        max-width: none;
+        transform: translateX(-50%);
+      }
+
+      .hud {
+        top: max(16px, env(safe-area-inset-top));
+        left: max(16px, env(safe-area-inset-left));
+        right: max(16px, env(safe-area-inset-right));
+      }
+
+      .milestone {
+        right: max(16px, env(safe-area-inset-right));
+        left: auto;
+      }
+
+      .sound-toggle {
+        width: 40px;
+        height: 40px;
+      }
+
+      .prompt {
+        bottom: max(18px, env(safe-area-inset-bottom));
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      .prompt {
+        left: auto;
+        right: max(18px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        width: 220px;
+        text-align: right;
+        transform: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :root {
+        --door-time: 100ms;
+      }
+
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+      }
+
+      #bulbFixture,
+      #character.is-startled,
+      .is-flickering #bulbGlow,
+      .is-flickering #bulbGlass,
+      .is-resisting #bulbGlow,
+      .is-resisting #bulbGlass {
+        animation: none !important;
+      }
+
+      #character,
+      #doorPanel,
+      #roomFill,
+      #floorFill,
+      #baseboard,
+      #roomTexture,
+      #lightPool,
+      #bulbGlow {
+        transition-duration: 100ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app" data-state="idle" data-door="closed">
+    <h1 class="sr-only">Impossible Light Bulb</h1>
+
+    <header class="hud" aria-label="Game controls">
+      <p class="attempts" aria-live="polite">Attempts: <span id="attemptCount">0</span></p>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-label="Mute sound" aria-pressed="true" title="Mute sound">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9.5v5h4l4 3.5V6L8 9.5H4Z" fill="currentColor"/>
+          <path class="sound-wave" d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path class="sound-slash" d="M15.5 9 21 14.5M21 9l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <p class="milestone" id="milestone">It really wants the light off.</p>
+
+    <section class="scene-shell" aria-label="A dark room with a hanging light bulb and a closed door">
+      <svg class="room-svg" id="roomSvg" viewBox="200 0 950 800" role="img" aria-labelledby="sceneTitle sceneDescription" preserveAspectRatio="xMidYMid meet">
+        <title id="sceneTitle">The impossible light bulb</title>
+        <desc id="sceneDescription">Pull the hanging cord to turn on the bulb. A small creature behind the door may object.</desc>
+
+        <defs>
+          <radialGradient id="lightGradient" cx="50%" cy="0" r="80%">
+            <stop offset="0" stop-color="#fff5bd" stop-opacity=".95"/>
+            <stop offset=".38" stop-color="#f5c965" stop-opacity=".5"/>
+            <stop offset="1" stop-color="#e7a947" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="bulbGlowGradient">
+            <stop offset="0" stop-color="#fff8cf" stop-opacity=".95"/>
+            <stop offset=".22" stop-color="#ffe28b" stop-opacity=".65"/>
+            <stop offset="1" stop-color="#f2b84c" stop-opacity="0"/>
+          </radialGradient>
+          <pattern id="paperTexture" width="80" height="80" patternUnits="userSpaceOnUse">
+            <circle cx="7" cy="13" r=".65" fill="#fff" opacity=".18"/>
+            <circle cx="39" cy="52" r=".55" fill="#07111e" opacity=".12"/>
+          </pattern>
+          <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#050910" flood-opacity=".28"/>
+          </filter>
+          <filter id="cordShadow" x="-80%" y="-10%" width="260%" height="140%">
+            <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#050910" flood-opacity=".45"/>
+          </filter>
+          <filter id="smallGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="filamentGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="knobReady" x="-100%" y="-100%" width="300%" height="300%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#f6c767" flood-opacity=".8"/>
+          </filter>
+        </defs>
+
+        <rect id="roomFill" x="-100" y="-100" width="1400" height="900"/>
+        <path id="lightPool" d="M354 248 216 650h488L566 248Z" fill="url(#lightGradient)"/>
+        <rect id="roomTexture" x="-100" y="-100" width="1400" height="900" fill="url(#paperTexture)"/>
+        <path id="floorFill" d="M-100 650H1300V900H-100Z"/>
+        <path id="baseboard" d="M-100 650H1300" fill="none" stroke-width="5"/>
+
+        <g id="bulbFixture">
+          <path d="M460-40V102" fill="none" stroke="#1f292c" stroke-width="5"/>
+          <circle id="bulbGlow" cx="460" cy="177" r="132" fill="url(#bulbGlowGradient)"/>
+          <path d="M410 161c0-35 22-60 50-60s50 25 50 60c0 27-13 41-24 54-7 8-10 16-10 26h-32c0-10-3-18-10-26-11-13-24-27-24-54Z" id="bulbGlass" stroke-width="4"/>
+          <path d="M427 151q5-25 24-34" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".62"/>
+          <path d="M438 203c8-14 14-23 22-23s14 9 22 23M460 180v48" id="filament" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M440 227h40v20q-20 12-40 0Z" fill="#9ea9ac" stroke="#343c3e" stroke-width="4"/>
+          <path d="M446 235h28M446 243h28" fill="none" stroke="#5c676a" stroke-width="3" stroke-linecap="round"/>
+          <path d="M460 250v14" fill="none" stroke="#343c3e" stroke-width="4" stroke-linecap="round"/>
+        </g>
+
+        <g id="cordVisual">
+          <path id="cordLine" d="M460 260 C460 320 460 375 460 438"/>
+          <g id="cordControl" role="button" aria-label="Pull the light cord" aria-disabled="false" tabindex="0">
+            <g id="cordKnobPosition">
+              <g id="cordKnob">
+                <circle id="knobOuter" cx="460" cy="438" r="9" fill="#f0f3f2" stroke="#30383a" stroke-width="2.5"/>
+                <circle cx="457" cy="435" r="2" fill="#fff" opacity=".8"/>
+              </g>
+            </g>
+            <circle id="cordHitArea" cx="460" cy="438" r="44" fill="transparent"/>
+          </g>
+        </g>
+
+        <g id="doorScene" transform="translate(-160 0)">
+          <rect x="724" y="141" width="310" height="518" rx="4" fill="#141718" opacity=".35" filter="url(#softShadow)"/>
+          <rect id="doorInterior" x="740" y="158" width="278" height="494" rx="3"/>
+          <path id="doorGlow" d="M740 158h90l-22 494h-68Z"/>
+
+          <g id="character" aria-hidden="true">
+            <circle cx="754" cy="410" r="25" fill="#6f3727" stroke="#4b251d" stroke-width="4"/>
+            <circle cx="754" cy="410" r="13" fill="#dc9870"/>
+            <circle cx="851" cy="410" r="25" fill="#6f3727" stroke="#4b251d" stroke-width="4"/>
+            <circle cx="851" cy="410" r="13" fill="#dc9870"/>
+            <circle cx="804" cy="409" r="60" fill="#8f4d2f" stroke="#4b251d" stroke-width="5" filter="url(#softShadow)"/>
+            <ellipse cx="790" cy="438" rx="35" ry="29" fill="#e8b98b" stroke="#6d3525" stroke-width="3"/>
+            <ellipse cx="783" cy="397" rx="12" ry="15" fill="#f6ecda"/>
+            <ellipse cx="816" cy="397" rx="12" ry="15" fill="#f6ecda"/>
+            <circle id="leftPupil" cx="782" cy="399" r="5" fill="#2c1c19"/>
+            <circle id="rightPupil" cx="815" cy="399" r="5" fill="#2c1c19"/>
+            <circle cx="773" cy="432" r="7" fill="#4e2720"/>
+            <g id="annoyedBrows" fill="none" stroke="#4e2720" stroke-width="6" stroke-linecap="round">
+              <path d="m771 379 22 7M805 386l22-8"/>
+            </g>
+            <path id="smileMouth" d="M778 449q12 8 24-2" fill="none" stroke="#5b2b22" stroke-width="5" stroke-linecap="round"/>
+            <path id="annoyedMouth" d="M778 454q12-8 25-1" fill="none" stroke="#5b2b22" stroke-width="5" stroke-linecap="round"/>
+            <ellipse id="surpriseMouth" cx="791" cy="451" rx="7" ry="10" fill="#5b2b22"/>
+          </g>
+
+          <g id="characterArm" aria-hidden="true">
+            <path id="armOutline" d="M805 474Q790 470 780 465"/>
+            <path id="armPath" d="M805 474Q790 470 780 465"/>
+            <g id="handGroup">
+              <circle cx="0" cy="0" r="18" fill="#8f4d2f" stroke="#4b251d" stroke-width="4"/>
+              <path d="M-7-11-14-22M1-13-3-26M9-9 10-22" fill="none" stroke="#4b251d" stroke-width="11" stroke-linecap="round"/>
+              <path d="M-7-11-14-22M1-13-3-26M9-9 10-22" fill="none" stroke="#8f4d2f" stroke-width="7" stroke-linecap="round"/>
+            </g>
+          </g>
+
+          <g id="doorPanel">
+            <rect id="doorLeaf" x="740" y="158" width="278" height="494" rx="2" stroke-width="5"/>
+            <path id="doorPanels" d="M770 188h101v189H770ZM887 188h101v189H887ZM770 394h101v226H770ZM887 394h101v226H887Z" fill="none" stroke-width="5" opacity=".72"/>
+            <rect id="doorKnob" x="958" y="418" width="19" height="16" rx="2" fill="#d7b54b" stroke="#675125" stroke-width="3"/>
+            <rect x="961" y="420" width="5" height="4" rx="1" fill="#fff0a3" opacity=".7"/>
+          </g>
+
+          <g id="doorFrame" fill="none" stroke-linejoin="round">
+            <path id="doorFrameLine" d="M725 654V143h309v511" stroke="#282321" stroke-width="16"/>
+            <path id="doorThreshold" d="M726 651h309" stroke="#3f3531" stroke-width="10"/>
+          </g>
+        </g>
+      </svg>
+    </section>
+
+    <p class="prompt" id="prompt">Pull the cord</p>
+    <div class="sr-only" id="liveStatus" aria-live="assertive"></div>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const app = document.getElementById('app');
+      const roomSvg = document.getElementById('roomSvg');
+      const cordControl = document.getElementById('cordControl');
+      const cordLine = document.getElementById('cordLine');
+      const cordKnobPosition = document.getElementById('cordKnobPosition');
+      const cordHitArea = document.getElementById('cordHitArea');
+      const character = document.getElementById('character');
+      const characterArm = document.getElementById('characterArm');
+      const armOutline = document.getElementById('armOutline');
+      const armPath = document.getElementById('armPath');
+      const handGroup = document.getElementById('handGroup');
+      const attemptCount = document.getElementById('attemptCount');
+      const milestone = document.getElementById('milestone');
+      const soundToggle = document.getElementById('soundToggle');
+      const prompt = document.getElementById('prompt');
+      const liveStatus = document.getElementById('liveStatus');
+      const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const DOOR_OFFSET_X = -160;
+
+      const State = Object.freeze({
+        IDLE: 'idle',
+        DRAGGING: 'dragging',
+        LIT_WAIT: 'lit-wait',
+        CHARACTER: 'character',
+        RESETTING: 'resetting'
+      });
+
+      const cord = {
+        anchorX: 460,
+        anchorY: 260,
+        restX: 460,
+        restY: 438,
+        x: 460,
+        y: 438,
+        vx: 0,
+        vy: 0,
+        pointerVx: 0,
+        pointerVy: 0,
+        maxLength: 284,
+        triggerDistance: 72,
+        controlledByCharacter: false
+      };
+
+      let state = State.IDLE;
+      let activePointerId = null;
+      let lastPointer = null;
+      let attempts = 0;
+      let roundToken = 0;
+      let lastReaction = '';
+      let surprisePlayed = false;
+      let armProgress = 0;
+      let armOrigin = { x: 805, y: 474 };
+      let armTarget = { x: cord.x, y: cord.y };
+      let previousFrameTime = performance.now();
+      let viewportCordBounds = {
+        minX: cord.anchorX - 118,
+        maxX: cord.anchorX + 118,
+        minY: cord.restY - 36,
+        maxY: cord.restY + 112
+      };
+      const managedTimers = new Set();
+
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+      const randomBetween = (min, max) => min + Math.random() * (max - min);
+      const smoothStep = value => value * value * (3 - 2 * value);
+      const easeOutBack = value => {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(value - 1, 3) + c1 * Math.pow(value - 1, 2);
+      };
+
+      function setState(nextState) {
+        state = nextState;
+        app.dataset.state = nextState;
+        const disabled = nextState !== State.IDLE && nextState !== State.DRAGGING;
+        cordControl.setAttribute('aria-disabled', String(disabled));
+      }
+
+      function announce(message) {
+        liveStatus.textContent = '';
+        requestAnimationFrame(() => {
+          liveStatus.textContent = message;
+        });
+      }
+
+      function setPrompt(message) {
+        prompt.textContent = message;
+      }
+
+      function wait(ms, token = roundToken) {
+        return new Promise(resolve => {
+          const timer = window.setTimeout(() => {
+            managedTimers.delete(timer);
+            resolve(token === roundToken);
+          }, ms);
+          managedTimers.add(timer);
+        });
+      }
+
+      function schedule(ms, callback, token = roundToken) {
+        const timer = window.setTimeout(() => {
+          managedTimers.delete(timer);
+          if (token === roundToken) callback();
+        }, ms);
+        managedTimers.add(timer);
+      }
+
+      function motionDuration(ms) {
+        const variation = randomBetween(.9, 1.12);
+        return Math.max(70, ms * variation * (reducedMotionQuery.matches ? .22 : 1));
+      }
+
+      function tween(duration, update, easing = smoothStep, token = roundToken) {
+        if (duration <= 0) {
+          update(1);
+          return Promise.resolve(token === roundToken);
+        }
+
+        return new Promise(resolve => {
+          const startedAt = performance.now();
+
+          function frame(now) {
+            if (token !== roundToken) {
+              resolve(false);
+              return;
+            }
+
+            const progress = clamp((now - startedAt) / duration, 0, 1);
+            update(easing(progress));
+            if (progress < 1) {
+              requestAnimationFrame(frame);
+            } else {
+              resolve(true);
+            }
+          }
+
+          requestAnimationFrame(frame);
+        });
+      }
+
+      // Draw the chain as a soft curve so horizontal movement reads as a swing.
+      function updateCordVisual() {
+        const horizontalOffset = cord.x - cord.anchorX;
+        const firstControlX = cord.anchorX + horizontalOffset * .18;
+        const secondControlX = cord.x - horizontalOffset * .12;
+        const firstControlY = cord.anchorY + (cord.y - cord.anchorY) * .37;
+        const secondControlY = cord.anchorY + (cord.y - cord.anchorY) * .73;
+
+        cordLine.setAttribute('d', `M${cord.anchorX} ${cord.anchorY} C${firstControlX} ${firstControlY} ${secondControlX} ${secondControlY} ${cord.x} ${cord.y}`);
+        cordKnobPosition.setAttribute('transform', `translate(${cord.x - cord.restX} ${cord.y - cord.restY})`);
+        cordHitArea.setAttribute('cx', cord.x.toFixed(2));
+        cordHitArea.setAttribute('cy', cord.y.toFixed(2));
+      }
+
+      // A damped spring handles the cord's swing and return whenever nobody holds it.
+      function cordPhysicsFrame(now) {
+        const delta = clamp((now - previousFrameTime) / 16.667, .25, 2);
+        previousFrameTime = now;
+
+        if (state !== State.DRAGGING && !cord.controlledByCharacter) {
+          const spring = reducedMotionQuery.matches ? .22 : .075;
+          const damping = reducedMotionQuery.matches ? .55 : .865;
+          cord.vx = clamp((cord.vx + (cord.restX - cord.x) * spring * delta) * Math.pow(damping, delta), -12, 12);
+          cord.vy = clamp((cord.vy + (cord.restY - cord.y) * spring * delta) * Math.pow(damping, delta), -8, 8);
+          cord.x += cord.vx * delta;
+          cord.y += cord.vy * delta;
+
+          if (cord.x < viewportCordBounds.minX || cord.x > viewportCordBounds.maxX) {
+            cord.x = clamp(cord.x, viewportCordBounds.minX, viewportCordBounds.maxX);
+            cord.vx *= -.22;
+          }
+          if (cord.y < viewportCordBounds.minY || cord.y > viewportCordBounds.maxY) {
+            cord.y = clamp(cord.y, viewportCordBounds.minY, viewportCordBounds.maxY);
+            cord.vy *= -.18;
+          }
+
+          if (Math.abs(cord.x - cord.restX) < .03 && Math.abs(cord.y - cord.restY) < .03 && Math.abs(cord.vx) < .03 && Math.abs(cord.vy) < .03) {
+            cord.x = cord.restX;
+            cord.y = cord.restY;
+            cord.vx = 0;
+            cord.vy = 0;
+          }
+        }
+
+        updateCordVisual();
+        requestAnimationFrame(cordPhysicsFrame);
+      }
+
+      function clientPointToSvg(clientX, clientY) {
+        const point = roomSvg.createSVGPoint();
+        const screenMatrix = roomSvg.getScreenCTM();
+        if (!screenMatrix) return { x: cord.restX, y: cord.restY };
+        point.x = clientX;
+        point.y = clientY;
+        return point.matrixTransform(screenMatrix.inverse());
+      }
+
+      function toSvgPoint(event) {
+        return clientPointToSvg(event.clientX, event.clientY);
+      }
+
+      // Convert the actually visible app edges into SVG coordinates. This is
+      // essential on mobile, where the SVG is intentionally wider than 100vw.
+      function refreshCordBounds() {
+        const rect = app.getBoundingClientRect();
+        const safeMargin = 24;
+        const topLeft = clientPointToSvg(rect.left + safeMargin, rect.top + safeMargin);
+        const bottomRight = clientPointToSvg(rect.right - safeMargin, rect.bottom - safeMargin);
+        const visibleLeft = Math.min(topLeft.x, bottomRight.x);
+        const visibleRight = Math.max(topLeft.x, bottomRight.x);
+        const visibleTop = Math.min(topLeft.y, bottomRight.y);
+        const visibleBottom = Math.max(topLeft.y, bottomRight.y);
+
+        viewportCordBounds = {
+          minX: Math.min(cord.restX, Math.max(cord.anchorX - 118, visibleLeft)),
+          maxX: Math.max(cord.restX, Math.min(cord.anchorX + 118, visibleRight)),
+          minY: Math.min(cord.restY, Math.max(cord.restY - 36, visibleTop)),
+          maxY: Math.max(cord.restY, Math.min(cord.restY + 112, visibleBottom))
+        };
+
+        cord.x = clamp(cord.x, viewportCordBounds.minX, viewportCordBounds.maxX);
+        cord.y = clamp(cord.y, viewportCordBounds.minY, viewportCordBounds.maxY);
+      }
+
+      function constrainCordToPointer(point) {
+        let x = clamp(point.x, viewportCordBounds.minX, viewportCordBounds.maxX);
+        let y = clamp(point.y, viewportCordBounds.minY, viewportCordBounds.maxY);
+        const dx = x - cord.anchorX;
+        const dy = y - cord.anchorY;
+        const length = Math.hypot(dx, dy);
+
+        if (length > cord.maxLength) {
+          const scale = cord.maxLength / length;
+          x = cord.anchorX + dx * scale;
+          y = cord.anchorY + dy * scale;
+        }
+
+        return {
+          x: clamp(x, viewportCordBounds.minX, viewportCordBounds.maxX),
+          y: clamp(y, viewportCordBounds.minY, viewportCordBounds.maxY)
+        };
+      }
+
+      function beginDrag(event) {
+        if (state !== State.IDLE || event.button > 0) return;
+        event.preventDefault();
+        sounds.ensure();
+        refreshCordBounds();
+        activePointerId = event.pointerId;
+        cordControl.setPointerCapture(activePointerId);
+        cordControl.classList.add('is-grabbing');
+        setState(State.DRAGGING);
+        lastPointer = { ...toSvgPoint(event), time: performance.now() };
+        cord.pointerVx = 0;
+        cord.pointerVy = 0;
+        setPrompt('Keep pulling');
+      }
+
+      function moveDrag(event) {
+        if (state !== State.DRAGGING || event.pointerId !== activePointerId) return;
+        event.preventDefault();
+        const now = performance.now();
+        const next = constrainCordToPointer(toSvgPoint(event));
+        const elapsed = Math.max(8, now - lastPointer.time);
+
+        cord.pointerVx = (next.x - cord.x) / elapsed * 16.667;
+        cord.pointerVy = (next.y - cord.y) / elapsed * 16.667;
+        cord.x = next.x;
+        cord.y = next.y;
+        lastPointer = { ...next, time: now };
+
+        const ready = cord.y - cord.restY >= cord.triggerDistance;
+        cordControl.classList.toggle('is-ready', ready);
+        setPrompt(ready ? 'Let go' : 'Keep pulling');
+        updateCordVisual();
+      }
+
+      function endDrag(event, allowSwitch = true) {
+        if (state !== State.DRAGGING || event.pointerId !== activePointerId) return;
+        event.preventDefault();
+        const pulledFarEnough = allowSwitch && cord.y - cord.restY >= cord.triggerDistance;
+
+        if (cordControl.hasPointerCapture(activePointerId)) {
+          cordControl.releasePointerCapture(activePointerId);
+        }
+        activePointerId = null;
+        cordControl.classList.remove('is-grabbing', 'is-ready');
+        cord.vx = clamp(cord.pointerVx * .82, -12, 12);
+        cord.vy = clamp(cord.pointerVy * .35, -8, 8);
+
+        if (pulledFarEnough) {
+          startLightRound();
+        } else {
+          setState(State.IDLE);
+          setPrompt('Pull the cord');
+        }
+      }
+
+      function setLight(isOn, flicker = false) {
+        app.classList.toggle('is-lit', isOn);
+        document.body.classList.toggle('is-lit', isOn);
+        app.classList.remove('is-flickering', 'is-resisting');
+
+        if (isOn && flicker && !reducedMotionQuery.matches) {
+          app.classList.add('is-flickering');
+          schedule(510, () => app.classList.remove('is-flickering'));
+        }
+      }
+
+      function updateAttempts() {
+        attemptCount.textContent = String(attempts);
+        if (attempts >= 5) milestone.classList.add('is-visible');
+      }
+
+      async function startLightRound() {
+        const token = ++roundToken;
+        setState(State.LIT_WAIT);
+        attempts += 1;
+        updateAttempts();
+        sounds.click();
+        setLight(true, true);
+        setPrompt('Light on');
+        announce(`Attempt ${attempts}. The light is on.`);
+
+        await wait(randomBetween(800, 1800), token);
+        if (token !== roundToken) return;
+
+        setState(State.CHARACTER);
+        setPrompt('…');
+        const reaction = chooseReaction();
+        await performReaction(reaction, token);
+      }
+
+      function chooseReaction() {
+        if (attempts >= 10 && !surprisePlayed) {
+          surprisePlayed = true;
+          return 'long-look';
+        }
+
+        const reactions = ['slow-peek', 'hand-only', 'sneaky-hand', 'immediate', 'watches', 'annoyed', 'double-take', 'misses', 'resists'];
+        const choices = reactions.filter(reaction => reaction !== lastReaction);
+        lastReaction = choices[Math.floor(Math.random() * choices.length)];
+        return lastReaction;
+      }
+
+      function setDoor(position, playSound = true) {
+        app.dataset.door = position;
+        if (playSound) sounds.creak(position === 'closed');
+      }
+
+      function clearCharacterExpression() {
+        character.classList.remove('is-looking-bulb', 'is-looking-user', 'is-annoyed', 'is-startled');
+      }
+
+      async function revealCharacter(reaction, token) {
+        if (reaction === 'double-take') {
+          setDoor('slight');
+          await wait(motionDuration(330), token);
+          character.classList.add('is-peeking', 'is-looking-user');
+          sounds.reaction('curious');
+          await wait(motionDuration(360), token);
+          character.classList.remove('is-peeking', 'is-looking-user');
+          setDoor('closed');
+          await wait(motionDuration(300), token);
+          setDoor('wide');
+          await wait(motionDuration(270), token);
+          character.classList.add('is-peeking', 'is-looking-bulb');
+          return;
+        }
+
+        const isHiddenHandReaction = reaction === 'hand-only' || reaction === 'sneaky-hand';
+        const doorPosition = isHiddenHandReaction ? 'slight' : reaction === 'immediate' ? 'wide' : 'open';
+        setDoor(doorPosition);
+        await wait(motionDuration(reaction === 'immediate' ? 180 : 520), token);
+
+        if (reaction !== 'hand-only') {
+          character.classList.add('is-peeking');
+          if (reaction === 'annoyed') character.classList.add('is-annoyed');
+          if (reaction === 'watches') character.classList.add('is-looking-user');
+          else character.classList.add('is-looking-bulb');
+          sounds.reaction(reaction === 'annoyed' ? 'annoyed' : 'curious');
+          await wait(motionDuration(reaction === 'slow-peek' ? 700 : 300), token);
+        } else {
+          sounds.reaction('tiny');
+        }
+
+        // Inspired by the reference: the face retreats before an anonymous arm
+        // slides out, creating a clean peek → vanish → pull visual joke.
+        if (reaction === 'sneaky-hand') {
+          character.classList.remove('is-peeking', 'is-looking-bulb');
+          setPrompt('Where did it go?');
+          await wait(motionDuration(260), token);
+          sounds.reaction('tiny');
+        }
+
+        if (reaction === 'watches') {
+          await wait(motionDuration(820), token);
+          character.classList.remove('is-looking-user');
+          character.classList.add('is-looking-bulb');
+          await wait(motionDuration(250), token);
+        }
+      }
+
+      function drawArm(progress, target = armTarget) {
+        armProgress = progress;
+        armTarget = target;
+        const targetXInDoorSpace = target.x - DOOR_OFFSET_X;
+        const endX = armOrigin.x + (targetXInDoorSpace - armOrigin.x) * progress;
+        const endY = armOrigin.y + (target.y - armOrigin.y) * progress;
+        const curve = Math.sin(progress * Math.PI) * 38;
+        const controlX = armOrigin.x + (endX - armOrigin.x) * .5;
+        const controlY = armOrigin.y + (endY - armOrigin.y) * .5 - curve;
+        const armGeometry = `M${armOrigin.x} ${armOrigin.y} Q${controlX} ${controlY} ${endX} ${endY}`;
+        armOutline.setAttribute('d', armGeometry);
+        armPath.setAttribute('d', armGeometry);
+        const angle = Math.atan2(endY - controlY, endX - controlX) * 180 / Math.PI;
+        handGroup.setAttribute('transform', `translate(${endX} ${endY}) rotate(${angle + 90})`);
+        characterArm.classList.toggle('is-visible', progress > .015);
+      }
+
+      async function animateArm(to, target, duration, token, easing = smoothStep) {
+        const from = armProgress;
+        return tween(duration, value => {
+          drawArm(from + (to - from) * value, target);
+        }, easing, token);
+      }
+
+      async function reachForCord(reaction, token) {
+        const reachesFromBehindDoor = reaction === 'hand-only' || reaction === 'sneaky-hand';
+        armOrigin = reachesFromBehindDoor ? { x: 828, y: 436 } : { x: 805, y: 474 };
+        drawArm(0, { x: cord.x, y: cord.y });
+
+        if (reaction === 'misses') {
+          await animateArm(1, { x: cord.x + 58, y: cord.y + 22 }, motionDuration(520), token, easeOutBack);
+          sounds.reaction('oops');
+          character.classList.add('is-startled');
+          await wait(motionDuration(210), token);
+          await animateArm(.48, { x: cord.x + 58, y: cord.y + 22 }, motionDuration(190), token);
+          character.classList.remove('is-startled');
+          await wait(motionDuration(120), token);
+        }
+
+        await animateArm(1, { x: cord.x, y: cord.y }, motionDuration(reaction === 'immediate' ? 260 : 620), token, easeOutBack);
+      }
+
+      async function characterPullsCord(reaction, token) {
+        const startX = cord.x;
+        const startY = cord.y;
+        const pullDistance = 82;
+        cord.controlledByCharacter = true;
+
+        if (reaction === 'resists') {
+          app.classList.add('is-resisting');
+          character.classList.add('is-startled');
+          sounds.reaction('oops');
+          await wait(reducedMotionQuery.matches ? 100 : 620, token);
+        }
+
+        await tween(motionDuration(reaction === 'immediate' ? 210 : 390), value => {
+          cord.x = startX + 12 * Math.sin(value * Math.PI);
+          cord.y = startY + pullDistance * value;
+          drawArm(1, { x: cord.x, y: cord.y });
+          updateCordVisual();
+        }, easeOutBack, token);
+
+        sounds.click();
+        setLight(false);
+        announce('The character switched the light off.');
+        setPrompt('Light off');
+        cord.vx = -2.8;
+        cord.vy = 1.2;
+        cord.controlledByCharacter = false;
+      }
+
+      // Each reaction follows the same guarded sequence but changes its timing,
+      // expression, reveal style, or reach so a round cannot be interrupted.
+      async function performReaction(reaction, token) {
+        await revealCharacter(reaction, token);
+        if (token !== roundToken) return;
+
+        if (reaction === 'long-look') {
+          setPrompt('Still on…');
+          await wait(3000, token);
+          if (token !== roundToken) return;
+          character.classList.add('is-annoyed');
+          sounds.reaction('annoyed');
+        }
+
+        await reachForCord(reaction, token);
+        if (token !== roundToken) return;
+
+        await characterPullsCord(reaction, token);
+        if (token !== roundToken) return;
+
+        await wait(motionDuration(170), token);
+        await animateArm(0, armTarget, motionDuration(280), token);
+        characterArm.classList.remove('is-visible');
+        character.classList.remove('is-peeking');
+        clearCharacterExpression();
+        await wait(motionDuration(reaction === 'immediate' ? 100 : 240), token);
+        setDoor('closed');
+        await wait(motionDuration(520), token);
+        finishRound(token);
+      }
+
+      function finishRound(token) {
+        if (token !== roundToken) return;
+        setState(State.RESETTING);
+        app.classList.remove('is-flickering', 'is-resisting');
+        app.dataset.door = 'closed';
+        character.classList.remove('is-peeking');
+        clearCharacterExpression();
+        characterArm.classList.remove('is-visible');
+        armProgress = 0;
+        cord.controlledByCharacter = false;
+
+        schedule(motionDuration(380), () => {
+          setState(State.IDLE);
+          setPrompt(attempts >= 5 ? 'Again?' : 'Pull the cord');
+          announce('The room is dark again. The cord is ready.');
+        }, token);
+      }
+
+      async function keyboardPull(event) {
+        if (state !== State.IDLE || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        sounds.ensure();
+        setState(State.DRAGGING);
+        cordControl.classList.add('is-ready');
+        const startY = cord.y;
+        await tween(motionDuration(260), value => {
+          cord.y = startY + 86 * value;
+          updateCordVisual();
+        }, easeOutBack, roundToken);
+        cordControl.classList.remove('is-ready');
+        cord.vy = -1;
+        startLightRound();
+      }
+
+      class SoundEngine {
+        constructor() {
+          this.enabled = true;
+          this.context = null;
+          this.AudioContext = window.AudioContext || window.webkitAudioContext || null;
+        }
+
+        ensure() {
+          if (!this.enabled || !this.AudioContext) return null;
+          if (!this.context) this.context = new this.AudioContext();
+          if (this.context.state === 'suspended') this.context.resume().catch(() => {});
+          return this.context;
+        }
+
+        tone(startFrequency, endFrequency, duration, type = 'sine', volume = .035, delay = 0) {
+          const context = this.ensure();
+          if (!context) return;
+          const start = context.currentTime + delay;
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = type;
+          oscillator.frequency.setValueAtTime(Math.max(1, startFrequency), start);
+          oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+          gain.gain.setValueAtTime(.0001, start);
+          gain.gain.exponentialRampToValueAtTime(volume, start + .012);
+          gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+          oscillator.connect(gain).connect(context.destination);
+          oscillator.start(start);
+          oscillator.stop(start + duration + .02);
+        }
+
+        noise(duration = .045, volume = .022) {
+          const context = this.ensure();
+          if (!context) return;
+          const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * duration), context.sampleRate);
+          const samples = buffer.getChannelData(0);
+          for (let index = 0; index < samples.length; index += 1) {
+            samples[index] = Math.random() * 2 - 1;
+          }
+          const source = context.createBufferSource();
+          const gain = context.createGain();
+          source.buffer = buffer;
+          gain.gain.setValueAtTime(volume, context.currentTime);
+          gain.gain.exponentialRampToValueAtTime(.0001, context.currentTime + duration);
+          source.connect(gain).connect(context.destination);
+          source.start();
+        }
+
+        click() {
+          if (!this.enabled) return;
+          this.noise(.045, .025);
+          this.tone(640, 170, .07, 'square', .025);
+        }
+
+        creak(closing = false) {
+          if (!this.enabled) return;
+          this.tone(closing ? 92 : 138, closing ? 55 : 72, .38, 'sawtooth', .013);
+          this.tone(closing ? 180 : 230, closing ? 105 : 120, .24, 'triangle', .009, .09);
+        }
+
+        reaction(kind = 'curious') {
+          if (!this.enabled) return;
+          if (kind === 'annoyed') {
+            this.tone(190, 125, .2, 'triangle', .025);
+          } else if (kind === 'oops') {
+            this.tone(410, 230, .17, 'sine', .03);
+          } else if (kind === 'tiny') {
+            this.tone(480, 610, .09, 'sine', .018);
+          } else {
+            this.tone(275, 420, .13, 'sine', .024);
+            this.tone(390, 530, .1, 'triangle', .012, .07);
+          }
+        }
+      }
+
+      const sounds = new SoundEngine();
+
+      function toggleSound() {
+        sounds.enabled = !sounds.enabled;
+        soundToggle.setAttribute('aria-pressed', String(sounds.enabled));
+        soundToggle.setAttribute('aria-label', sounds.enabled ? 'Mute sound' : 'Turn sound on');
+        soundToggle.title = sounds.enabled ? 'Mute sound' : 'Turn sound on';
+        if (sounds.enabled) {
+          sounds.ensure();
+          sounds.reaction('tiny');
+        }
+      }
+
+      cordControl.addEventListener('pointerdown', beginDrag);
+      cordControl.addEventListener('pointermove', moveDrag);
+      cordControl.addEventListener('pointerup', event => endDrag(event, true));
+      cordControl.addEventListener('pointercancel', event => endDrag(event, false));
+      cordControl.addEventListener('keydown', keyboardPull);
+      soundToggle.addEventListener('click', toggleSound);
+      window.addEventListener('resize', refreshCordBounds, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', refreshCordBounds, { passive: true });
+      }
+
+      updateCordVisual();
+      requestAnimationFrame(now => {
+        refreshCordBounds();
+        previousFrameTime = now;
+        cordPhysicsFrame(now);
+      });
+    })();
+  </script>
+</body>
+</html>

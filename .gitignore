@@ -1,0 +1,55 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors and local tooling
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.codex/
+.claude/
+/.flow/micro/
+
+# Environment and secret material
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+local.properties
+secure.properties
+keystore.properties
+
+# Dependencies, builds, and caches
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+.parcel-cache/
+.turbo/
+.next/
+.vercel/
+.netlify/
+.wrangler/
+tmp/
+temp/
+*.tmp
+*.log
+
+# Generated project memory
+_Graphify/
+_RepoMem/
+
+# Local captures and reference media
+*.mov
+*.mp4
+*.webm
+*.gif
