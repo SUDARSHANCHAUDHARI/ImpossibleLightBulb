@@ -25,6 +25,16 @@ const svgDoorOffset = Number(html.match(/id="doorScene" transform="translate\((-
 const javascriptDoorOffset = Number(javascript.match(/const DOOR_OFFSET_X = (-?\d+)/)?.[1]);
 assert(Number.isFinite(svgDoorOffset), 'SVG door offset is missing');
 assert(svgDoorOffset === javascriptDoorOffset, 'SVG and JavaScript door offsets do not match');
+assert(!html.includes('min-height: 480px'), 'Fixed app minimum height can crop short landscape viewports');
+assert(!html.includes('132vw'), 'Oversized mobile SVG can crop the scene horizontally');
+
+const responsiveViewBoxes = [...javascript.matchAll(/nextViewBox = '(-?\d+) (-?\d+) (\d+) (\d+)'/g)]
+  .map(match => match.slice(1).map(Number));
+assert(responsiveViewBoxes.length === 3, 'Expected landscape, portrait, and balanced view boxes');
+for (const [x, y, width, height] of responsiveViewBoxes) {
+  assert(x <= 333 && x + width >= 890, `Responsive viewBox clips scene horizontally: ${x} ${y} ${width} ${height}`);
+  assert(y <= -40 && y + height >= 680, `Responsive viewBox clips scene vertically: ${x} ${y} ${width} ${height}`);
+}
 
 assert(!/https?:\/\//i.test(html), 'External URL found');
 assert(!/<(?:script|img|link|audio|video|source)\b[^>]+(?:src|href)=/i.test(html), 'External asset element found');
@@ -43,6 +53,8 @@ const requiredMarkers = [
   'setPointerCapture',
   'viewportCordBounds',
   'refreshCordBounds',
+  'updateSceneLayout',
+  'height: 100dvh',
   'cord.x < viewportCordBounds.minX',
   'cord.vx = clamp',
   'target.x - DOOR_OFFSET_X',
