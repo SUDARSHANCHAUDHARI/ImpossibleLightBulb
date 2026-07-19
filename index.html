@@ -5,21 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="theme-color" content="#26373e">
+  <meta name="theme-color" content="#15152a">
   <meta name="description" content="A playful light bulb that never wants to stay on.">
   <title>Impossible Light Bulb</title>
   <style>
     :root {
       color-scheme: dark;
-      --midnight: #26373e;
-      --midnight-deep: #1f2e34;
-      --lamplight: #f3dca5;
-      --lamplight-deep: #dfc482;
-      --ink: #36312c;
-      --chalk: #eef3f3;
+      --ink: #15152a;
+      --paper: #fff5df;
+      --coral: #ff5d5d;
+      --blue: #4f7cff;
+      --butter: #ffd166;
+      --mint: #58d6a9;
+      --lilac: #b695ff;
+      --midnight: var(--ink);
+      --midnight-deep: #24233f;
+      --lamplight: var(--paper);
+      --lamplight-deep: var(--butter);
+      --chalk: var(--paper);
       --character: #8f4d2f;
-      --door-dark: #332c29;
-      --door-light: #b7a69d;
+      --door-dark: var(--ink);
+      --door-light: var(--lilac);
+      --display: Impact, Haettenschweiler, "Arial Narrow Bold", "Franklin Gothic Condensed", sans-serif;
+      --body: Inter, ui-rounded, "SF Pro Rounded", "Segoe UI", sans-serif;
       --ease-out: cubic-bezier(.2, .75, .25, 1);
       --door-time: 560ms;
     }
@@ -42,7 +50,7 @@
       min-height: 100svh;
       background: var(--midnight);
       color: var(--chalk);
-      font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
+      font-family: var(--body);
       user-select: none;
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
@@ -98,17 +106,18 @@
       align-items: center;
       justify-content: center;
       padding: 0;
-      border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+      border: 3px solid var(--ink);
       border-radius: 50%;
-      background: rgb(10 18 21 / 18%);
-      color: currentColor;
+      background: var(--paper);
+      box-shadow: 3px 3px 0 var(--blue);
+      color: var(--ink);
       cursor: pointer;
       pointer-events: auto;
       transition: transform 180ms ease, background-color 350ms ease, color 350ms ease;
     }
 
     .is-lit .sound-toggle {
-      background: rgb(255 248 218 / 42%);
+      background: var(--paper);
     }
 
     .sound-toggle:hover {
@@ -116,8 +125,9 @@
     }
 
     .sound-toggle:focus-visible,
-    #cordControl:focus-visible {
-      outline: 3px solid #f4bd5f;
+    #cordControl:focus-visible,
+    .collection-credit a:focus-visible {
+      outline: 4px solid var(--blue);
       outline-offset: 4px;
     }
 
@@ -468,7 +478,7 @@
 
     .prompt {
       fill: currentColor;
-      font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
+      font-family: var(--body);
       font-size: 24px;
       font-weight: 700;
       letter-spacing: .1em;
@@ -490,6 +500,38 @@
       clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
+    }
+
+    .collection-credit {
+      position: absolute;
+      z-index: 20;
+      bottom: max(14px, env(safe-area-inset-bottom));
+      left: max(16px, env(safe-area-inset-left));
+      display: flex;
+      max-width: calc(100% - 32px);
+      flex-wrap: wrap;
+      gap: .25rem .45rem;
+      align-items: center;
+      margin: 0;
+      padding: .45rem .65rem;
+      color: var(--ink);
+      background: var(--paper);
+      border: 2px solid var(--ink);
+      border-radius: .75rem;
+      box-shadow: 3px 3px 0 var(--blue);
+      font-size: clamp(.62rem, 1.4vw, .72rem);
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .collection-credit a {
+      color: inherit;
+      font-family: var(--display);
+      font-weight: 900;
+      letter-spacing: .03em;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
+      pointer-events: auto;
     }
 
     @media (max-width: 680px) {
@@ -684,6 +726,8 @@
         <text class="prompt" id="prompt" x="720" y="112" aria-hidden="true">Pull the cord</text>
       </svg>
     </section>
+
+    <p class="collection-credit"><a href="../TinyChaos/">TC · TinyChaos</a><span>by Sudarshan Chaudhari</span></p>
 
     <div class="sr-only" id="liveStatus" aria-live="assertive"></div>
   </main>
